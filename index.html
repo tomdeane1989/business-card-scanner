@@ -330,14 +330,23 @@
                     this.showStatus('Sending to n8n...', 'info');
                     this.sendBtn.disabled = true;
 
-                    const formData = new FormData();
-                    formData.append('image', this.capturedImageData, 'business_card.jpg');
-                    formData.append('timestamp', new Date().toISOString());
-                    formData.append('source', 'business_card_scanner_pwa');
+                    // Convert image to base64 for JSON payload
+                    const base64Image = await this.blobToBase64(this.capturedImageData);
+                    
+                    const payload = {
+                        image: base64Image,
+                        timestamp: new Date().toISOString(),
+                        source: 'business_card_scanner_pwa',
+                        filename: 'business_card.jpg',
+                        mimeType: 'image/jpeg'
+                    };
 
                     const response = await fetch(webhookUrl, {
                         method: 'POST',
-                        body: formData
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(payload)
                     });
 
                     if (response.ok) {
@@ -357,6 +366,16 @@
                 } finally {
                     this.sendBtn.disabled = false;
                 }
+            }
+
+            // Helper method to convert blob to base64
+            blobToBase64(blob) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
             }
 
             showStatus(message, type = 'info') {
